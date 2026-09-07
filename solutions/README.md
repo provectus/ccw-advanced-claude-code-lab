@@ -17,3 +17,6 @@ Finished copies of every `build-it/` stub, plus a few files with no stub counter
   the rubric to grade a `/goal` run against.
 - `PLANTED-FINDINGS.md` — the answer key. It spoils every step: file, line, and expected result
   for all five planted findings. Read it only if you're stuck or authoring the workshop text.
+- `RUNGS.md` — the five rung prompts, byte for byte, plus the shared deliverable contract
+  (`runs/dep-audit.md` format, the exact reply line, the score definition, the scorecard row
+  command) that all five are graded against.
