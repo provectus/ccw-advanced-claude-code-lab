@@ -2,7 +2,8 @@
 // Turns ledger rows into one table of what each workshop step cost.
 //
 // Usage:
-//   npm run scorecard -- add "<step label>" --result "<what came back>" [--risk "<what could have gone wrong>"]
+//   npm run scorecard -- add "<step label>" --result "<what came back>" [--score "<n/4>"] [--risk "<what could have gone wrong>"]
+//   npm run scorecard -- add "<step label>" --result "not run"   # always adds a zero-cost row, even with nothing new in the ledger (e.g. a rung the attendee's setup couldn't run)
 //   npm run scorecard                 # print runs/scorecard.md (regenerated from scorecard.json)
 //   npm run scorecard -- reset        # archive scorecard.json to scorecard-<n>.json, start fresh
 //
@@ -25,7 +26,7 @@ else if (cmd === 'add') add(rest)
 else if (cmd === 'reset') reset()
 else {
   console.error(`unknown command: ${cmd}`)
-  console.error('usage: scorecard [add "<step label>" --result "<what came back>" [--risk "<...>"] | reset]')
+  console.error('usage: scorecard [add "<step label>" --result "<what came back>" [--score "<n/4>"] [--risk "<...>"] | reset]')
   process.exit(1)
 }
 
@@ -50,13 +51,14 @@ function saveCard(card) {
 
 function parseAddArgs(argv) {
   if (argv.length === 0 || argv[0].startsWith('--')) {
-    console.error('usage: scorecard add "<step label>" --result "<what came back>" [--risk "<what could have gone wrong>"]')
+    console.error('usage: scorecard add "<step label>" --result "<what came back>" [--score "<n/4>"] [--risk "<what could have gone wrong>"]')
     process.exit(1)
   }
   const step = argv[0]
-  const out = { step, result: '', risk: '' }
+  const out = { step, result: '', score: '', risk: '' }
   for (let i = 1; i < argv.length; i += 1) {
     if (argv[i] === '--result') out.result = argv[++i] ?? ''
+    else if (argv[i] === '--score') out.score = argv[++i] ?? ''
     else if (argv[i] === '--risk') out.risk = argv[++i] ?? ''
   }
   if (!out.result) {
@@ -74,13 +76,22 @@ function formatWall(ms) {
 }
 
 function add(argv) {
-  const { step, result, risk } = parseAddArgs(argv)
+  const { step, result, score, risk } = parseAddArgs(argv)
   const rows = readLedgerRows()
   const card = loadCard()
   const newRows = rows.slice(card.last_consumed)
+  const isNotRun = result.trim().toLowerCase() === 'not run'
 
   if (newRows.length === 0) {
-    console.log('no ledger rows since the last mark')
+    if (!isNotRun) {
+      console.log('no ledger rows since the last mark')
+      return
+    }
+    card.rows.push({ step, result, score, risk, agents: 0, tokens: 0, est_usd: 0, wall: '00:00' })
+    card.last_consumed = rows.length
+    saveCard(card)
+    writeMarkdown(card)
+    console.log(`added row ${card.rows.length}: ${step} — not run (no ledger rows)`)
     return
   }
 
@@ -91,7 +102,7 @@ function add(argv) {
   const lastTs = new Date(newRows[newRows.length - 1].ts).getTime()
   const wall = formatWall(lastTs - firstTs)
 
-  card.rows.push({ step, result, risk, agents, tokens, est_usd, wall })
+  card.rows.push({ step, result, score, risk, agents, tokens, est_usd, wall })
   card.last_consumed = rows.length
   saveCard(card)
   writeMarkdown(card)
@@ -115,11 +126,12 @@ function escapeCell(value) {
 }
 
 function writeMarkdown(card) {
-  const header = ['#', 'step', 'what came back', 'agents', 'tokens', 'est $', 'wall', 'what could have gone wrong']
+  const header = ['#', 'step', 'what came back', 'correct', 'agents', 'tokens', 'est $', 'wall', 'what could have gone wrong']
   const body = card.rows.map((r, i) => [
     String(i + 1),
     r.step,
     r.result,
+    r.score || '',
     String(r.agents),
     r.tokens.toLocaleString('en-US'),
     `$${r.est_usd.toFixed(4)}`,
@@ -129,7 +141,7 @@ function writeMarkdown(card) {
   const totalAgents = card.rows.reduce((s, r) => s + r.agents, 0)
   const totalTokens = card.rows.reduce((s, r) => s + r.tokens, 0)
   const totalUsd = card.rows.reduce((s, r) => s + r.est_usd, 0)
-  const totalRow = ['', 'TOTAL', '', String(totalAgents), totalTokens.toLocaleString('en-US'), `$${totalUsd.toFixed(4)}`, '', '']
+  const totalRow = ['', 'TOTAL', '', '', String(totalAgents), totalTokens.toLocaleString('en-US'), `$${totalUsd.toFixed(4)}`, '', '']
 
   const lines = [
     `| ${header.map(escapeCell).join(' | ')} |`,
@@ -144,7 +156,7 @@ function writeMarkdown(card) {
 function print() {
   const card = loadCard()
   if (card.rows.length === 0) {
-    console.log('No scorecard rows yet. Run: npm run scorecard -- add "<step>" --result "<what came back>"')
+    console.log('No scorecard rows yet. Run: npm run scorecard -- add "<step>" --result "<what came back>" [--score "<n/4>"]')
     return
   }
   writeMarkdown(card)

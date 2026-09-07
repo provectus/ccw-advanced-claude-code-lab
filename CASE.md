@@ -28,14 +28,19 @@ TypeScript services, and Claude Code.
 
 ## What the workshop is actually about
 
-You will find these same five problems five different ways today: one
-sub-agent, three parallel workers, a finished skill, a saved workflow, and a
-goal loop. Finding them isn't the hard part — a careful human finds all five
-in an afternoon too. The hard part is what each way costs to run and what
-each way can quietly get wrong: a worker that drifts off-brief, a skill
-that's confidently wrong about item 3, a fix that satisfies a test without
-fixing anything. The scorecard is where you write that down, in your own
-words, next to what it actually cost.
+Today you run the same dependency audit — finding 1, the four unpinned
+ranges across `payments/`, `kyc/`, and `ledger/` — five different ways: one
+sub-agent that verifies itself, three parallel finders with no verifier, the
+finished `/dep-audit` skill, the dynamic workflow, and an agent team. Same
+services, same four-item answer key, same reply format
+(`found <n>, confirmed <n>, refuted <n>`). What changes is the harness, and
+the harness is what you're actually grading. A finder can over-report and
+still call it done. A merged list from three workers is only as good as the
+human who never checked it. A report can drop a real finding while the reply
+line still claims four. A team's consensus is only as good as its verifier.
+The scorecard's `correct` column is where you write down, against the same
+four findings every time, which harness actually got it right — and next to
+it, what it cost you to find out.
 
 ## Four kinds of skill in this repo
 
@@ -48,14 +53,15 @@ words, next to what it actually cost.
 
 ## The scorecard
 
-`npm run scorecard -- add "<step>" --result "<what came back>" --risk "<what
-could have gone wrong>"` appends one row. `npm run scorecard` prints the
-table.
+`npm run scorecard -- add "<step>" --result "<what came back>" --score
+"<n/4>" --risk "<what could have gone wrong>"` appends one row. `npm run
+scorecard` prints the table.
 
 | column | meaning |
 |---|---|
 | step | the rung or step you just ran |
 | what came back | the artifact or answer, in your words |
+| correct | confirmed-and-correct findings out of 4, checked against the answer key (e.g. `3/4`); a false positive goes in "what could have gone wrong", not here |
 | agents | sub-agents spawned since the last row |
 | tokens | total tokens across those agents and turns |
 | est $ | estimated cost, from `tools/ledger/prices.json` |

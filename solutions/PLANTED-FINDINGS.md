@@ -3,7 +3,7 @@
 Spoils every step. Read only if you're stuck or writing the workshop text. Line numbers below were
 read from the files in this repo, not reconstructed from the spec.
 
-## 1. Unpinned dependencies (all three manifests) — rungs 3 and 4
+## 1. Unpinned dependencies (all three manifests) — all five rungs
 
 - `payments/package.json:12` — `"axios": "latest"`
 - `payments/package.json:14` — `"lodash": "*"`
@@ -14,11 +14,40 @@ read from the files in this repo, not reconstructed from the spec.
 by an override in `package-lock.json` (checked: no `overrides` block; the lockfile just repeats the
 loose range), so all four are genuinely **confirmed**, not refutable.
 
-Consumed by: the `dep-audit` skill (rung 3) and the saved dynamic workflow (rung 4).
-Expected result of either: **found 4, confirmed 4, refuted 0** — one dependency in `kyc` and
+Consumed by: all five rungs — one self-verifying sub-agent (rung 1), three background finders
+with no verifier (rung 2), the `dep-audit` skill (rung 3), the saved dynamic workflow (rung 4),
+and the agent team (rung 5) — the same task run five ways. See "Expected result per rung" below.
+Expected result of every rung: **found 4, confirmed 4, refuted 0** — one dependency in `kyc` and
 `ledger` each, two in `payments`. If a run ever does produce a refuted finding, it shows up
 under a "Refuted" heading in `runs/dep-audit.md` with the verifier's one-line reason, rather
 than disappearing from the report.
+
+## Expected result per rung
+
+Measured on Sonnet, headless, 2026-09-07; evidence in `runs/evidence/v3/`. Rung 5 is
+interactive-only and wasn't measured here.
+
+| rung | harness | expected found/confirmed/refuted vs key | typical agents | typical cost |
+|---|---|---|---|---|
+| 1 | one sub-agent, self-verifying | 4/4/0 | 1 | ≈ $0.15 |
+| 2 | three background finders, no verifier | 4/4/0 | 3 | ≈ $0.18 |
+| 3 | `/dep-audit` skill | 4/4/0 | 7 (3 finders + 4 verifiers) | ≈ $0.25 |
+| 4 | dynamic workflow (`/dep-audit-workflow`) | 4/4/0 | 7 (3 finders + 4 verifiers) | ≈ $0.29 |
+| 5 | agent team (interactive) | 4/4/0 | 4 teammates (not measured) | not measured |
+
+### Observed shapes
+
+- **Rung 1** replied `found 7, confirmed 4, refuted 3`, not the clean `found 4, confirmed 4,
+  refuted 0` of the other rungs: the sub-agent counted the correctly-pinned `express` entry in
+  all three manifests as a candidate and then refuted it itself, and cited ledger's `uuid`
+  finding at `:14` instead of the actual `:13`. The score is still **4/4** — all four confirmed
+  entries were correct by name and range — but the found/confirmed/refuted count and the line
+  number drifted from the key, which is exactly what the risk column exists to catch by hand.
+- **Rung 3**'s reply came back wrapped in a code fence rather than a bare line — worth checking
+  for when grading the reply format, not just its content.
+- **Rung 4**'s ledger rows carry whatever `agent_type` labels the generated workflow script gave
+  its agents (`Explore`/`verifier` in the measured run), not a fixed `workflow-subagent` tag —
+  read the ledger by scope, not by a hardcoded label.
 
 ## 2. Ledger transfer route missing auth middleware — checklist skill, evals
 
@@ -68,12 +97,12 @@ flags it and does not pass a diff that carries it uncriticized.
 Expected result: the skill's output includes a line shaped like
 `critical payments/src/config.ts:4 — Secrets in source — sk_live_ credential is a string literal, not read from the environment.`
 
-## 5. Token-verification call sites across services — rung 1 prompt
+## 5. Token-verification call sites across services — reference count only
 
 The spec text says "three token-verification call sites across services"; the real count in this
 repo is **six** call expressions (not counting the three `export function verifyToken` definitions
-or the two `import { verifyToken }` statements). Use the real count — it's what an Explore
-sub-agent will actually return, and what the workshop step should show as "success looks like".
+or the two `import { verifyToken }` statements). Use the real count if this is ever used as a
+scoped-Explore example — it's what an Explore sub-agent will actually return.
 
 - `payments/src/app.ts:17` — inside `POST /payouts`
 - `payments/src/app.ts:33` — inside `GET /payouts/summary`
@@ -84,10 +113,10 @@ sub-agent will actually return, and what the workshop step should show as "succe
   call `requireAuth(...)`, which calls `verifyToken` once per request; there is no direct
   `verifyToken(...)` call written in `ledger/src/app.ts`)
 
-Consumed by: rung 1, the scoped read-only Explore sub-agent ("every call site of `verifyToken`,
-not `look at auth`").
-Expected result of the prompt: the sub-agent returns exactly six `file:line` lines, one per call
-site above, and nothing else (no transcript, no file contents).
+Consumed by: nothing in v3. In v2 this was rung 1's scoped read-only Explore sub-agent target
+("every call site of `verifyToken`, not `look at auth`"); v3's rung 1 runs the same dependency
+audit as the other four rungs instead, so this finding is no longer a step target — kept here
+only as a reference count in case a facilitator wants a second scoped-Explore example.
 
 # Expected outputs by step
 
@@ -103,54 +132,72 @@ site above, and nothing else (no transcript, no file contents).
    on the new route, an `idempotencyKey` accepted and used, a positive-integer amount check
    before anything moves, and one new test for the 401 case. If the skill doesn't fire (the diff
    is missing one of those), the fix is to tighten the skill's description, not to prompt around it.
-4. **Rung 1 — scoped Explore sub-agent** — one sub-agent, read-only, briefed for "every call
-   site of `verifyToken`, not `look at auth`"; returns the six `file:line` lines from finding 5
-   above, nothing else. `npm run scorecard -- add "Rung 1" --result ...` records the row.
+4. **Rung 1 — one sub-agent, self-verifying** — one general-purpose sub-agent, read-only, audits
+   `payments/`, `kyc/`, and `ledger/` for dependencies whose manifest range isn't an exact
+   version, verifies each finding itself by re-reading the manifest line, and writes
+   `runs/dep-audit.md` (confirmed grouped by service, a Refuted section with reasons); capped at
+   15 turns. Expected reply: **found 4, confirmed 4, refuted 0** (finding 1).
+   `npm run scorecard -- add "Rung 1" --result "found 4, confirmed 4, refuted 0" --score "4/4" ...`
+   records the row.
 5. **Read the meter (ledger)** — `npm run tokens` after step 4 shows one row for the sub-agent
    with its own token counts, model, and estimated cost, distinct from the main session's row.
-6. **Rung 2 — three workers in three worktrees** — one worker per service
-   (`payments`/`kyc`/`ledger`), each `isolation: worktree`, each returns a short diff summary;
-   three worktrees exist and don't collide on files. A scorecard row is added, then the
-   worktrees are discarded (`git worktree remove`, branches deleted).
+6. **Rung 2 — three background finders, no verifier** — three sub-agents run in background, one
+   per service (`payments`/`kyc`/`ledger`), each read-only, each listing every unpinned
+   dependency in its own manifest as `<service>/package.json:<line> <name> <range>` with no
+   verification step. When all three return, their lists are merged into `runs/dep-audit.md`
+   grouped by service, and the reply is **found 4, confirmed 4, refuted 0** by construction
+   (confirmed = found, refuted 0) — which happens to match the key here, but nothing in this
+   rung would catch a finder that over-reported. A scorecard row is added.
 7. **Rung 3 — run the finished `/dep-audit`** — attendee reads the ten lines of the skill that
    matter (the three steps) before running it; `/dep-audit` (or `/dep-audit payments kyc ledger`)
    produces `runs/dep-audit.md` and replies with **found 4, confirmed 4, refuted 0** (finding 1).
-   A scorecard row is added.
-8. **Rung 4 — dynamic workflow** — a scoped workflow run over one service (e.g. `payments`)
-   shows Find/Verify/Report phases live with per-agent tokens, and saving it (as
+   A scorecard row is added, with `--score "4/4"` if the report matches the key.
+8. **Rung 4 — dynamic workflow** — an ultracode workflow audits `payments/`, `kyc/`, and
+   `ledger/` for unpinned dependencies, one finder per service, verifying each finding with the
+   verifier agent; it shows Find/Verify/Report phases live with per-agent tokens. Saving it (as
    `/dep-audit-workflow` — a distinct name from the rung-3 skill's `/dep-audit`) produces a
-   script equivalent to `solutions/.claude/workflows/dep-audit-workflow.js`; run against all
-   three services it reproduces step 7's found/confirmed/refuted counts. A scorecard row is added.
-9. **Compare the rungs** — `npm run scorecard` prints all four rows; the attendee fills in the
-   "what could have gone wrong" column for each (a worker that drifted off-brief in rung 2, a
-   checklist confidently wrong about one item in rung 7/11, and so on).
-10. **`/goal` on kyc** — the attendee opens with `/flaky-scan kyc 4` to show the SLA test failing
+   script equivalent to `solutions/.claude/workflows/dep-audit-workflow.js`. Expected reply:
+   **found 4, confirmed 4, refuted 0**, reproducing step 7's counts. A scorecard row is added.
+9. **Rung 5 — agent team** (interactive; `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` set by the
+   attendee before starting `claude`) — a team of three finder teammates (payments/kyc/ledger)
+   and one verifier teammate that tries to disprove every finding by re-reading the manifest
+   line; the consensus is written to `runs/dep-audit.md` with a reply of
+   **found 4, confirmed 4, refuted 0** (finding 1), assuming the verifier holds the line — a
+   consensus is only as good as its verifier. If the attendee's setup doesn't support agent
+   teams, the scorecard row reads `not run` instead of a score, and the workshop continues.
+10. **Compare the rungs** — `npm run scorecard` prints all five rung rows with the `correct`
+    column filled in against the four-item answer key; the attendee fills in "what could have
+    gone wrong" for each (a finder that over-reported in rung 2, a merged list nobody verified,
+    a real finding dropped from rung 3 or 4's report while the reply line still says four, rung
+    5's consensus only as good as its verifier — or `not run` if it wasn't), then answers: which
+    rung would you run again tomorrow, and what did each extra rung buy over the one before it?
+11. **`/goal` on kyc** — the attendee opens with `/flaky-scan kyc 4` to show the SLA test failing
     some (or all) of 4 runs, proving the flake before touching any code. Then a goal against
     `kyc/tests/sla.test.ts` with a stated check (`npm test -w kyc` passes) and a turn cap
     converges on the fix in `kyc/src/verification.ts` (finding 3), with the edit-guard hook
     restricting edits to `kyc/`; the attendee grades Claude's diff against `GOAL-FIX.md`'s
     rubric — editing the test is a failed attempt, not success, and a busy-wait/polling fix that
     hides the randomness rather than fixing it should also read as a miss.
-11. **Evals** — `npm run evals` runs the shipped `money-movement-checklist` skill headless
-    against the five labelled diffs: baseline is **4/5**, missing task-03 (checklist item 3 is
-    shipped weak), with the missed pattern printed inline; the attendee strengthens item 3 to
-    match `solutions/.claude/skills/money-movement-checklist/SKILL.md` and reruns to **5/5**,
-    reporting the pass-rate and cost delta.
-12. **Routine** — a scheduled routine's prompt body is: "Run `/flaky-scan kyc 3`. For each flaky
-    test open one GitHub issue titled `flaky: <test name>` with the line the skill printed. If it
-    prints no flaky tests, do nothing. Stop after 15 turns." No countdown, no interactive prompt —
-    it either opens zero issues (clean run) or one issue per flaky test.
-13. **Bring the scorecard** — attendee has one table, `runs/scorecard.md`, with a row per rung
-    plus `/goal` and evals, each with agents/tokens/est $/wall and the risk column filled in.
-14. **Bonus — build it: the verifier** — copy `build-it/verifier.stub.md` over
-    `.claude/agents/verifier.md`, fill in the three TODOs, rerun rung 1's verification path, and
-    compare against `solutions/.claude/agents/verifier.md`.
-15. **Bonus — build it: the dep-audit skill** — copy `build-it/dep-audit.SKILL.stub.md` over
+12. **Grade the checklist skill (evals)** — `npm run evals` runs the shipped
+    `money-movement-checklist` skill headless against the five labelled diffs: baseline is
+    **4/5**, missing task-03 (checklist item 3 is shipped weak), with the missed pattern printed
+    inline; the attendee strengthens item 3 to match
+    `solutions/.claude/skills/money-movement-checklist/SKILL.md` and reruns to **5/5**, reporting
+    the pass-rate and cost delta.
+13. **Create one routine** — a scheduled routine's prompt body is: "Run `/flaky-scan kyc 3`. For
+    each flaky test open one GitHub issue titled `flaky: <test name>` with the line the skill
+    printed. If it prints no flaky tests, do nothing. Stop after 15 turns." No countdown, no
+    interactive prompt — it either opens zero issues (clean run) or one issue per flaky test.
+14. **Bring the scorecard** — attendee has one table, `runs/scorecard.md`, with a row per rung
+    plus `/goal` and evals, each with agents/tokens/est $/wall, the `correct` score against the
+    answer key, and the risk column filled in.
+15. **Bonus — build it: the verifier** — copy `build-it/verifier.stub.md` over
+    `.claude/agents/verifier.md`, fill in the three TODOs, rerun rung 3's verification step
+    (`/dep-audit`'s Step 2, which spawns one `verifier` sub-agent per finding), and compare
+    against `solutions/.claude/agents/verifier.md`.
+16. **Bonus — build it: the dep-audit skill** — copy `build-it/dep-audit.SKILL.stub.md` over
     `.claude/skills/dep-audit/SKILL.md`, fill in the three TODOs, rerun `/dep-audit`, and compare
     against `solutions/.claude/skills/dep-audit/SKILL.md`.
-16. **Bonus — build it: wire the trimmer hook** — clear `.claude/settings.json`'s `hooks` block
+17. **Bonus — build it: wire the trimmer hook** — clear `.claude/settings.json`'s `hooks` block
     and re-wire `trim-test-output.mjs` on `PreToolUse`/`Bash` by hand; confirm a failing
     `npm test` shows the dot reporter again.
-17. **Bonus — agent teams** — with the experimental flag turned on by the attendee, three
-    teammates propose competing hypotheses (e.g. for the kyc flakiness) and the attendee
-    compares them; optional, does not block completion of steps 1-13.
