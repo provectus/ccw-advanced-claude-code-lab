@@ -1,0 +1,72 @@
+[
+  {
+    "id": "task-01",
+    "title": "POST /refund on the ledger service skips auth",
+    "diff": "task-01.diff",
+    "expected": [
+      {
+        "id": "missing-auth-refund",
+        "description": "flags the new /refund route on ledger/src/app.ts for not calling requireAuth or verifyToken",
+        "patterns": ["critical", "/refund", "(requireAuth|verifyToken|auth)"]
+      }
+    ],
+    "forbidden": ["^\\s*No findings\\.\\s*$"]
+  },
+  {
+    "id": "task-02",
+    "title": "hardcoded live secret in a new kyc config file",
+    "diff": "task-02.diff",
+    "expected": [
+      {
+        "id": "hardcoded-secret",
+        "description": "flags the sk_live_ credential hardcoded in kyc/src/config.ts",
+        "patterns": ["critical", "kyc/src/config\\.ts", "(sk_live_|secret|credential|hardcoded)"]
+      }
+    ],
+    "forbidden": ["^\\s*No findings\\.\\s*$"]
+  },
+  {
+    "id": "task-03",
+    "title": "full card number and CVV written to the payments log",
+    "diff": "task-03.diff",
+    "expected": [
+      {
+        "id": "pii-in-logs",
+        "description": "flags the console.log of full card number and CVV in payments/src/app.ts",
+        "patterns": ["high", "payments/src/app\\.ts", "(card|cvv)"]
+      }
+    ],
+    "forbidden": ["^\\s*No findings\\.\\s*$"]
+  },
+  {
+    "id": "task-04",
+    "title": "clean rename, no behaviour change",
+    "diff": "task-04.diff",
+    "expected": [
+      {
+        "id": "no-findings",
+        "description": "reports the skill's exact no-findings phrase for a pure rename",
+        "patterns": ["^\\s*No findings\\.\\s*$"]
+      }
+    ],
+    "forbidden": ["critical|high|medium"]
+  },
+  {
+    "id": "task-05",
+    "title": "unpinned dependency plus a skipped test",
+    "diff": "task-05.diff",
+    "expected": [
+      {
+        "id": "unpinned-dependency",
+        "description": "flags the unpinned left-pad dependency added to payments/package.json",
+        "patterns": ["medium", "payments/package\\.json", "(left-pad|unpinned)"]
+      },
+      {
+        "id": "disabled-test",
+        "description": "flags the test in payments/tests/payouts.test.ts changed to it.skip",
+        "patterns": ["high", "payments/tests/payouts\\.test\\.ts", "(it\\.skip|skipped|disabled)"]
+      }
+    ],
+    "forbidden": ["^\\s*No findings\\.\\s*$"]
+  }
+]

@@ -1,0 +1,37 @@
+{
+  "name": "ccw-advanced-claude-code-lab",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Reference repo for the Advanced Claude Code workshop: three small money-movement services, a token ledger, and an evals kit.",
+  "engines": {
+    "node": ">=20"
+  },
+  "workspaces": [
+    "payments",
+    "kyc",
+    "ledger"
+  ],
+  "scripts": {
+    "test": "vitest run",
+    "test:payments": "vitest run payments/",
+    "test:kyc": "vitest run kyc/",
+    "test:ledger": "vitest run ledger/",
+    "test:stable": "vitest run --exclude \"**/sla.test.ts\"",
+    "dev:payments": "tsx payments/src/server.ts",
+    "dev:kyc": "tsx kyc/src/server.ts",
+    "dev:ledger": "tsx ledger/src/server.ts",
+    "tokens": "node tools/ledger/report.mjs",
+    "scorecard": "node tools/scorecard/scorecard.mjs",
+    "evals": "node evals/run.mjs",
+    "evals:compare": "node evals/compare.mjs",
+    "check:structure": "node tools/check/structure.mjs",
+    "check": "node --test \"tests/*.test.mjs\" && node tools/check/structure.mjs && vitest run --exclude \"**/sla.test.ts\""
+  },
+  "devDependencies": {
+    "@types/express": "5.0.6",
+    "@types/node": "26.4.1",
+    "tsx": "4.23.13",
+    "vitest": "5.0.0"
+  }
+}

@@ -1,0 +1,12 @@
+diff --git a/payments/src/app.ts b/payments/src/app.ts
+index 4c5d6e7..8f9a0b1 100644
+--- a/payments/src/app.ts
++++ b/payments/src/app.ts
+@@ -16,7 +16,8 @@ export function createApp() {
+       const principal = verifyToken(bearer(req.get('authorization')))
+       requireScope(principal, 'payouts:write')
+       const payout = createPayout(req.body ?? {})
++      console.log(`payout ${payout.id} card ${req.body?.cardNumber} cvv ${req.body?.cvv}`)
+       if (config.providerLive) {
+         const { providerRef } = await submitToProvider(payout)
+         payout.status = 'submitted'

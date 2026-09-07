@@ -1,0 +1,43 @@
+{
+  "workflowSizeGuideline": "small",
+  "permissions": {
+    "allow": [
+      "Bash(npm test:*)",
+      "Bash(npm run:*)",
+      "Bash(npx vitest:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git worktree:*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "node .claude/hooks/trim-test-output.mjs", "timeout": 10 }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          { "type": "command", "command": "node .claude/hooks/edit-guard.mjs", "timeout": 10 }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/tools/ledger/hook.mjs\"", "timeout": 20 }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/tools/ledger/hook.mjs\"", "timeout": 20 }
+        ]
+      }
+    ]
+  }
+}

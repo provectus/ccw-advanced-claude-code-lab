@@ -1,0 +1,28 @@
+diff --git a/ledger/src/app.ts b/ledger/src/app.ts
+index 1a2b3c4..5d6e7f8 100644
+--- a/ledger/src/app.ts
++++ b/ledger/src/app.ts
+@@ -1,7 +1,7 @@
+ import express, { type NextFunction, type Request, type Response } from 'express'
+ import { requireAuth } from './auth'
+-import { getAccount, listEntries, openAccount, transfer } from './ledger'
++import { getAccount, listEntries, openAccount, refund, transfer } from './ledger'
+
+ export function createApp() {
+   const app = express()
+@@ -31,6 +31,15 @@ export function createApp() {
+   app.get('/accounts/:id/entries', requireAuth('ledger:read'), (req, res) => {
+     res.json(listEntries(req.params.id))
+   })
+
++  app.post('/refund', (req, res, next) => {
++    try {
++      res.status(201).json(refund(req.body ?? {}))
++    } catch (err) {
++      next(err)
++    }
++  })
++
+   app.post('/transfer', (req, res, next) => {
+     try {
+       res.status(201).json(transfer(req.body ?? {}))

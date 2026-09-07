@@ -1,0 +1,16 @@
+{
+  "name": "@mm/payments",
+  "version": "1.4.0",
+  "private": true,
+  "type": "module",
+  "description": "Payout creation and lookup.",
+  "scripts": {
+    "test": "vitest run",
+    "dev": "tsx src/server.ts"
+  },
+  "dependencies": {
+    "axios": "latest",
+    "express": "5.2.1",
+    "lodash": "*"
+  }
+}

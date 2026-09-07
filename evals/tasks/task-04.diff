@@ -1,0 +1,15 @@
+diff --git a/ledger/src/ledger.ts b/ledger/src/ledger.ts
+index 2b3c4d5..6e7f8a9 100644
+--- a/ledger/src/ledger.ts
++++ b/ledger/src/ledger.ts
+@@ -46,8 +46,8 @@ export function transfer(input: { from?: unknown; to?: unknown; amountCents?:
+   }
+   if (typeof idempotencyKey !== 'string' || idempotencyKey.length === 0) throw new ValidationError('idempotencyKey required')
+
+-  const existing = byIdempotencyKey.get(idempotencyKey)
+-  if (existing) return existing
++  const existingEntry = byIdempotencyKey.get(idempotencyKey)
++  if (existingEntry) return existingEntry
+
+   const source = accounts.get(from)
+   const target = accounts.get(to)

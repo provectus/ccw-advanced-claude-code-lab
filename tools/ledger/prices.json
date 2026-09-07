@@ -1,0 +1,12 @@
+{
+  "note": "USD per million tokens. Cache creation is billed at 1.25x input, cache reads at 0.1x input. Unknown models are priced as the default family and flagged assumed.",
+  "per_million": {
+    "haiku": { "input": 1, "output": 5 },
+    "sonnet": { "input": 2, "output": 10 },
+    "opus": { "input": 5, "output": 25 },
+    "fable": { "input": 10, "output": 50 }
+  },
+  "cache_creation_multiplier": 1.25,
+  "cache_read_multiplier": 0.1,
+  "default_family": "sonnet"
+}

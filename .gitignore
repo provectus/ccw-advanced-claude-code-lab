@@ -1,0 +1,9 @@
+node_modules/
+runs/
+evals/results/
+.claude/edit-scope
+.claude/settings.local.json
+*.log
+.DS_Store
+runs-run1/
+*.stackdump

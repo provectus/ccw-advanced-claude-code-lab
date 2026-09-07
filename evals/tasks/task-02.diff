@@ -1,0 +1,14 @@
+diff --git a/kyc/src/config.ts b/kyc/src/config.ts
+new file mode 100644
+index 0000000..9f8e7d6
+--- /dev/null
++++ b/kyc/src/config.ts
+@@ -0,0 +1,8 @@
++export const config = {
++  port: Number(process.env.PORT ?? 4002),
++  providerBaseUrl: process.env.KYC_PROVIDER_BASE_URL ?? 'https://api.kyc-provider.example',
++  providerApiKey: 'sk_live_51NfQ7pLk9WvXz2mHc4-tRbY0eUq8oDgAiPo3sVqWxZ9',
++  strictMode: process.env.KYC_STRICT === '1',
++}
++
++export type KycConfig = typeof config
