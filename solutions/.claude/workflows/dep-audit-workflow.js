@@ -24,7 +24,7 @@ log(`found ${findings.length}`)
 const verified = await pipeline(
   findings,
   (finding) => agent(
-    `Finding: unpinned dependency ${finding.name}@${finding.range} at ${finding.file}:${finding.line}. Try to refute it. Confirmed only if the range is *, latest, or an open range (>=, ^, ~) with no lockfile pin overriding it; refuted if the version is exact or a lockfile pins it.`,
+    `Finding: unpinned dependency ${finding.name}@${finding.range} at ${finding.file}:${finding.line}. Try to refute it. Confirmed only if the entry sits under dependencies or devDependencies with the range *, latest, or an open range (>=, ^, ~); refuted if the version is exact, if the root package.json has an overrides block pinning it, or if the line is not a dependency at all (engines, scripts). A lockfile's resolved version is not a pin.`,
     { label: `verify:${finding.name}`, phase: 'Verify', model: 'sonnet', schema: VERDICT },
   ).then((verdict) => (verdict ? { ...finding, ...verdict } : null)),
   (v) => (v && v.confirmed ? v : null),

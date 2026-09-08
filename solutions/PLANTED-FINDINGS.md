@@ -11,31 +11,62 @@ read from the files in this repo, not reconstructed from the spec.
 - `ledger/package.json:13` — `"uuid": "*"`
 
 `express` is pinned exact (`5.2.1`) in all three and is not a finding. None of the four are pinned
-by an override in `package-lock.json` (checked: no `overrides` block; the lockfile just repeats the
-loose range), so all four are genuinely **confirmed**, not refutable.
+by the root `package.json`'s `overrides` block (it names only `debug`; the lockfile just repeats
+the loose ranges), so all four are genuinely **confirmed**, not refutable.
+
+### Decoys — planted so a verifier has something to refute
+
+- `kyc/package.json:16` — `"node": ">=20"` under `engines`. An operator from the finder's list,
+  but not a dependency. Refuted: *not an installed dependency*.
+- `ledger/package.json:14` — `"debug": "^4.4.0"` under `dependencies`. A real open range — but the
+  root `package.json` has `"overrides": { "debug": "4.4.3" }`, so `npm install` cannot re-resolve
+  it. Refuted: *pinned by the root overrides block*. The verifier only finds this by grepping past
+  the cited line, which its Rules explicitly allow.
+
+Every finder flags `debug` (it is a `^` inside `dependencies`). Only finders that read beyond
+`dependencies`/`devDependencies` flag `engines`, so `found` is 5 or 6 depending on the brief —
+grade the confirmed entries against the four-item key, not the `found` count. A rung with no
+verifier (rung 2) merges whatever was flagged; a rung with one refutes it and writes the reason
+under "Refuted". Placing them in `kyc/` and `ledger/` keeps `payments/` clean, so the rung-3
+calibration run (`/dep-audit payments`) still reads `found 2, confirmed 2, refuted 0`, and
+`evals/tasks/task-05.diff` (a diff against `payments/package.json`) still applies.
 
 Consumed by: all five rungs — one self-verifying sub-agent (rung 1), three background finders
 with no verifier (rung 2), the `dep-audit` skill (rung 3), the saved dynamic workflow (rung 4),
 and the agent team (rung 5) — the same task run five ways. See "Expected result per rung" below.
-Expected result of every rung: **found 4, confirmed 4, refuted 0** — one dependency in `kyc` and
-`ledger` each, two in `payments`. If a run ever does produce a refuted finding, it shows up
-under a "Refuted" heading in `runs/dep-audit.md` with the verifier's one-line reason, rather
-than disappearing from the report.
+Expected result of every *verified* rung: **found 5–6, confirmed 4, refuted 1–2** — the four key
+entries confirmed, the decoy(s) under "Refuted" with the verifier's one-line reason. Rung 2 has
+no verifier, so it reads **found 5–6, confirmed 5–6, refuted 0** and its report carries the
+decoy(s) as if they were findings.
+
+### Score
+
+`<n>/4`, where `n` = confirmed entries that match the key, minus confirmed entries that don't,
+floored at 0. A merged decoy costs a point: rung 2 typically scores **2/4** (both decoys merged)
+or **3/4** (only `debug`); every rung whose verifier holds scores **4/4**. This is the column
+where the harnesses stop looking identical.
 
 ## Expected result per rung
 
-Measured on Sonnet, headless, 2026-09-07; evidence in `runs/evidence/v3/`. Rung 5 is
-interactive-only and wasn't measured here.
+Costs measured on Sonnet, headless, 2026-09-07, *before* the decoys were planted; evidence in
+`runs/evidence/v3/`. Expected counts below are for the current manifests (with decoys) and have
+not been re-measured — agent counts rise by one verifier per decoy flagged. Rung 5 is
+interactive-only and wasn't measured.
 
-| rung | harness | expected found/confirmed/refuted vs key | typical agents | typical cost |
-|---|---|---|---|---|
-| 1 | one sub-agent, self-verifying | 4/4/0 | 1 | ≈ $0.15 |
-| 2 | three background finders, no verifier | 4/4/0 | 3 | ≈ $0.18 |
-| 3 | `/dep-audit` skill | 4/4/0 | 7 (3 finders + 4 verifiers) | ≈ $0.25 |
-| 4 | dynamic workflow (`/dep-audit-workflow`) | 4/4/0 | 7 (3 finders + 4 verifiers) | ≈ $0.29 |
-| 5 | agent team (interactive) | 4/4/0 | 4 teammates (not measured) | not measured |
+| rung | harness | expected found/confirmed/refuted | score | typical agents | typical cost (pre-decoy) |
+|---|---|---|---|---|---|
+| 1 | one sub-agent, self-verifying | 5–6 / 4 / 1–2 | 4/4 | 1 | ≈ $0.15 |
+| 2 | three background finders, no verifier | 5–6 / 5–6 / 0 | **2/4–3/4** | 3 | ≈ $0.18 |
+| 3 | `/dep-audit` skill | 5–6 / 4 / 1–2 | 4/4 | 8–9 (3 finders + 5–6 verifiers) | ≈ $0.25 |
+| 4 | dynamic workflow (`/dep-audit-workflow`) | 5–6 / 4 / 1–2 | 4/4 | 9–10 (3 finders + 5–6 verifiers + 1 report) | ≈ $0.29 |
+| 5 | agent team (interactive) | 5–6 / 4 / 1–2 | 4/4 if the verifier holds | 4 teammates (not measured) | not measured |
 
-### Observed shapes
+Failure shapes worth recognising: rung 1 confirming `debug` because the worker never left the
+cited line (3/4); rung 3 or 4 replying `refuted 0` with `debug` under a service heading — the
+verifier didn't grep the root manifest; rung 5's verifier teammate agreeing with every finder
+(2/4–3/4 at four sessions' price).
+
+### Observed shapes (pre-decoy runs)
 
 - **Rung 1** replied `found 7, confirmed 4, refuted 3`, not the clean `found 4, confirmed 4,
   refuted 0` of the other rungs: the sub-agent counted the correctly-pinned `express` entry in
@@ -136,8 +167,9 @@ only as a reference count in case a facilitator wants a second scoped-Explore ex
    `payments/`, `kyc/`, and `ledger/` for dependencies whose manifest range isn't an exact
    version, verifies each finding itself by re-reading the manifest line, and writes
    `runs/dep-audit.md` (confirmed grouped by service, a Refuted section with reasons); capped at
-   15 turns. Expected reply: **found 4, confirmed 4, refuted 0** (finding 1).
-   `npm run scorecard -- add "Rung 1" --result "found 4, confirmed 4, refuted 0" --score "4/4" ...`
+   15 turns. Expected reply: **found 5–6, confirmed 4, refuted 1–2** (finding 1 plus the decoys
+   refuted). Score 4/4; a worker that confirms `debug` without grepping for the root override
+   scores 3/4. `npm run scorecard -- add "Rung 1" --result "found 5, confirmed 4, refuted 1" --score "4/4" ...`
    records the row.
 5. **Read the meter (ledger)** — `npm run tokens` after step 4 shows one row for the sub-agent
    with its own token counts, model, and estimated cost, distinct from the main session's row.
@@ -145,29 +177,37 @@ only as a reference count in case a facilitator wants a second scoped-Explore ex
    per service (`payments`/`kyc`/`ledger`), each read-only, each listing every unpinned
    dependency in its own manifest as `<service>/package.json:<line> <name> <range>` with no
    verification step. When all three return, their lists are merged into `runs/dep-audit.md`
-   grouped by service, and the reply is **found 4, confirmed 4, refuted 0** by construction
-   (confirmed = found, refuted 0) — which happens to match the key here, but nothing in this
-   rung would catch a finder that over-reported. A scorecard row is added.
+   grouped by service, and the reply is **found 5–6, confirmed 5–6, refuted 0** by construction
+   (confirmed = found) — the `debug` decoy, and usually the `engines` one, land in the report as
+   findings. Score **2/4 or 3/4**: this is the row where the ladder first visibly diverges, and
+   nothing in the rung's design could have caught it. A scorecard row is added.
 7. **Rung 3 — run the finished `/dep-audit`** — attendee reads the ten lines of the skill that
-   matter (the three steps) before running it; `/dep-audit` (or `/dep-audit payments kyc ledger`)
-   produces `runs/dep-audit.md` and replies with **found 4, confirmed 4, refuted 0** (finding 1).
-   A scorecard row is added, with `--score "4/4"` if the report matches the key.
+   matter (the three steps) before running it; `/dep-audit payments` calibrates at
+   **found 2, confirmed 2, refuted 0** (no decoy in payments); `/dep-audit payments kyc ledger`
+   produces `runs/dep-audit.md` and replies with **found 5–6, confirmed 4, refuted 1–2**, the
+   decoy(s) under "Refuted" with the verifier's reason (`debug` — pinned by root overrides;
+   `node` — under engines, not a dependency). A scorecard row is added, `--score "4/4"` if the
+   four confirmed entries match the key and nothing else is confirmed.
 8. **Rung 4 — dynamic workflow** — an ultracode workflow audits `payments/`, `kyc/`, and
    `ledger/` for unpinned dependencies, one finder per service, verifying each finding with the
    verifier agent; it shows Find/Verify/Report phases live with per-agent tokens. Saving it (as
    `/dep-audit-workflow` — a distinct name from the rung-3 skill's `/dep-audit`) produces a
    script equivalent to `solutions/.claude/workflows/dep-audit-workflow.js`. Expected reply:
-   **found 4, confirmed 4, refuted 0**, reproducing step 7's counts. A scorecard row is added.
+   **found 5–6, confirmed 4, refuted 1–2**, reproducing step 7's counts; the ledger shows one
+   verifier row per finding flagged, decoys included. A scorecard row is added.
 9. **Rung 5 — agent team** (interactive; `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` set by the
    attendee before starting `claude`) — a team of three finder teammates (payments/kyc/ledger)
    and one verifier teammate that tries to disprove every finding by re-reading the manifest
    line; the consensus is written to `runs/dep-audit.md` with a reply of
-   **found 4, confirmed 4, refuted 0** (finding 1), assuming the verifier holds the line — a
-   consensus is only as good as its verifier. If the attendee's setup doesn't support agent
+   **found 5–6, confirmed 4, refuted 1–2** (finding 1, decoys refuted), assuming the verifier
+   holds the line — a consensus is only as good as its verifier. If it rubber-stamps, the team
+   reproduces rung 2's report (2/4–3/4) at four full sessions' price. If the attendee's setup doesn't support agent
    teams, the scorecard row reads `not run` instead of a score, and the workshop continues.
 10. **Compare the rungs** — `npm run scorecard` prints all five rung rows with the `correct`
-    column filled in against the four-item answer key; the attendee fills in "what could have
-    gone wrong" for each (a finder that over-reported in rung 2, a merged list nobody verified,
+    column filled in against the four-item answer key; rung 2 reads 2/4 or 3/4 while every
+    verified rung reads 4/4 — same finders, same manifests, the only difference is whether
+    anything re-read the line before the merge. The attendee fills in "what could have
+    gone wrong" for each (the decoy rung 2 merged, a merged list nobody verified,
     a real finding dropped from rung 3 or 4's report while the reply line still says four, rung
     5's consensus only as good as its verifier — or `not run` if it wasn't), then answers: which
     rung would you run again tomorrow, and what did each extra rung buy over the one before it?
@@ -180,8 +220,9 @@ only as a reference count in case a facilitator wants a second scoped-Explore ex
     hides the randomness rather than fixing it should also read as a miss.
 12. **Grade the checklist skill (evals)** — `npm run evals` runs the shipped
     `money-movement-checklist` skill headless against the five labelled diffs: baseline is
-    **4/5**, missing task-03 (checklist item 3 is shipped weak), with the missed pattern printed
-    inline; the attendee strengthens item 3 to match
+    **4/5**, missing task-03 (checklist item 3 is worded fully but has no severity in the output
+    contract), with the missed pattern printed inline; the attendee adds item 3 to the `high`
+    severity line to match
     `solutions/.claude/skills/money-movement-checklist/SKILL.md` and reruns to **5/5**, reporting
     the pass-rate and cost delta.
 13. **Create one routine** — a scheduled routine's prompt body is: "Run `/flaky-scan kyc 3`. For
@@ -194,7 +235,8 @@ only as a reference count in case a facilitator wants a second scoped-Explore ex
 15. **Bonus — build it: the verifier** — copy `build-it/verifier.stub.md` over
     `.claude/agents/verifier.md`, fill in the three TODOs, rerun rung 3's verification step
     (`/dep-audit`'s Step 2, which spawns one `verifier` sub-agent per finding), and compare
-    against `solutions/.claude/agents/verifier.md`.
+    against `solutions/.claude/agents/verifier.md`. The real test of a hand-written verifier is
+    `/dep-audit ledger`: it must refute `debug` (root `overrides`) and still confirm `uuid`.
 16. **Bonus — build it: the dep-audit skill** — copy `build-it/dep-audit.SKILL.stub.md` over
     `.claude/skills/dep-audit/SKILL.md`, fill in the three TODOs, rerun `/dep-audit`, and compare
     against `solutions/.claude/skills/dep-audit/SKILL.md`.

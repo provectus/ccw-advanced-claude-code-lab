@@ -11,23 +11,39 @@ changes is the harness.
   · payments `lodash` `*` (`payments/package.json:14`) · kyc `dayjs`
   `>=1.11` (`kyc/package.json:12`) · ledger `uuid` `*`
   (`ledger/package.json:13`).
+- **Decoys** (2, not in the key): kyc `node` `>=20` (`kyc/package.json:16`,
+  under `engines` — not a dependency) · ledger `debug` `^4.4.0`
+  (`ledger/package.json:14` — pinned to `4.4.3` by the root `package.json`'s
+  `overrides`). A finder flags them; a verifier refutes them; a rung with no
+  verifier merges them.
 - **Every rung writes** `runs/dep-audit.md`: confirmed entries grouped by
   service, one line each —
   `- <name> <range> — <service>/package.json:<line> — <reason>` — plus a
   `## Refuted` section with one reason per line for anything that didn't
   hold up. Then it replies with exactly:
   `found <n>, confirmed <n>, refuted <n>`.
-- **Score**: `<confirmed-and-correct>/4` — findings that are both confirmed
-  and match the answer key above. A false positive doesn't subtract from
-  the score; it goes in the scorecard's "what could have gone wrong"
-  column instead.
+- **Score**: `<n>/4` where `n` = confirmed findings that match the answer
+  key, minus confirmed entries that don't (a decoy, an `express` line,
+  anything else not in the key), floored at 0. A merged decoy costs a point:
+  `found 6, confirmed 6, refuted 0` scores `2/4`; `found 6, confirmed 4,
+  refuted 2` scores `4/4`. Write *which* entry cost the point in the
+  scorecard's "what could have gone wrong" column.
 - **Scorecard row**:
   `npm run scorecard -- add "<rung>" --result "found <n>, confirmed <n>, refuted <n>" --score "<n>/4" --risk "<what could have gone wrong>"`.
 - **Verified** means an evidence file records the command, its exit code,
   wall-clock time, the output, and a verdict of `match`, `partial`,
   `mismatch`, or `manual-only`, plus one sentence saying why.
 
-Before each rung: `rm -f runs/dep-audit.md`.
+Start the session with `claude --setting-sources project,local` — this repo's
+`.claude/settings.json` and `.claude/settings.local.json` only, no user-level
+plugins, MCP servers or skills, so `/context` and every ledger row measure the
+repo's setup and are comparable across attendees.
+
+Before each rung: `/clear`, then `rm -f runs/dep-audit.md`. `/clear` wipes the
+conversation, not the ledger (the hooks write to `runs/token-ledger.jsonl` and
+the scorecard reads it from disk), so each rung starts from the same baseline
+and its row measures the harness rather than the cache reads of everything said
+before it. Rung 5 starts a fresh process (the env var) and is already clean.
 
 ## Rung 1 — one sub-agent
 

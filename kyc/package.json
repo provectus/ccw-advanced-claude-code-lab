@@ -11,5 +11,8 @@
   "dependencies": {
     "dayjs": ">=1.11",
     "express": "5.2.1"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

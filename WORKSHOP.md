@@ -18,20 +18,31 @@ Five ways to run the same dependency audit across `payments/`, `kyc/`, and `ledg
 prompts, byte for byte, and the deliverable contract they all share are in
 [solutions/RUNGS.md](solutions/RUNGS.md): every rung writes `runs/dep-audit.md` (confirmed
 entries grouped by service, a `## Refuted` section with reasons) and replies with exactly
-`found <n>, confirmed <n>, refuted <n>`. Before each rung: `rm -f runs/dep-audit.md`. After each
+`found <n>, confirmed <n>, refuted <n>`. Start the session with
+`claude --setting-sources project,local` (this repo's settings only). Before each rung: `/clear`
+(the ledger and scorecard live on disk and survive it; the conversation's cache reads don't, so
+each row measures one harness from the same baseline), then `rm -f runs/dep-audit.md`. After each
 rung:
 
 ```bash
 npm run scorecard -- add "<rung>" --result "<the reply>" --score "<n>/4" --risk "<what could have gone wrong>"
 ```
 
-| rung | harness | prompt | expected reply | what it teaches |
-|---|---|---|---|---|
-| 1 | one sub-agent, self-verifying | RUNGS.md § Rung 1 | `found 4, confirmed 4, refuted 0` | what one careful sub-agent costs, and where its own verification can still drift |
-| 2 | three background finders, no verifier | RUNGS.md § Rung 2 | `found 4, confirmed 4, refuted 0` (confirmed = found, by construction) | a merged list is only as good as whoever checks it afterward — here, no one does |
-| 3 | `/dep-audit` skill | RUNGS.md § Rung 3 | `found 4, confirmed 4, refuted 0` | what a finished find/verify/report skill buys over ad hoc prompting |
-| 4 | dynamic workflow, saved as `/dep-audit-workflow` | RUNGS.md § Rung 4 | `found 4, confirmed 4, refuted 0` | the same shape as rung 3, built and saved by you |
-| 5 | agent team (interactive) | RUNGS.md § Rung 5 | `found 4, confirmed 4, refuted 0`, or `not run` | a consensus is only as good as its verifier teammate |
+The answer key has four entries; two decoys sit next to them (kyc's `engines` range, ledger's
+`debug` range pinned by a root `overrides`). Every finder flags at least the `debug` one, so the
+rungs stop agreeing the moment nothing re-reads the line before it is merged:
+
+| rung | harness | prompt | expected reply | score | what it teaches |
+|---|---|---|---|---|---|
+| 1 | one sub-agent, self-verifying | RUNGS.md § Rung 1 | `found 5–6, confirmed 4, refuted 1–2` | 4/4 | what one careful sub-agent costs, and where its own verification can still drift |
+| 2 | three background finders, no verifier | RUNGS.md § Rung 2 | `found 5–6, confirmed 5–6, refuted 0` (confirmed = found, by construction) | 2/4–3/4 | a merged list is only as good as whoever checks it afterward — here, no one does, and the decoys land in the report |
+| 3 | `/dep-audit` skill | RUNGS.md § Rung 3 | `found 5–6, confirmed 4, refuted 1–2` | 4/4 | what a finished find/verify/report skill buys over ad hoc prompting — a Refuted section with reasons |
+| 4 | dynamic workflow, saved as `/dep-audit-workflow` | RUNGS.md § Rung 4 | `found 5–6, confirmed 4, refuted 1–2` | 4/4 | the same shape as rung 3, built and saved by you |
+| 5 | agent team (interactive) | RUNGS.md § Rung 5 | `found 5–6, confirmed 4, refuted 1–2`, or `not run` | 4/4 | a consensus is only as good as its verifier teammate — if it rubber-stamps, you bought rung 2 at four sessions' price |
+
+`found` varies by one because kyc's `engines` decoy is only flagged by finders that read past
+`dependencies`/`devDependencies`; ledger's `debug` decoy is flagged by every finder. Grade the
+confirmed entries against the key, not the `found` count.
 
 ## The instruments
 
@@ -40,10 +51,18 @@ npm run scorecard -- add "<rung>" --result "<the reply>" --score "<n>/4" --risk 
   `tools/ledger/prices.json`. `tools/ledger/dedupe.mjs` is a one-off repair tool that
   re-verifies each row against its own transcript on disk — only needed against a ledger file
   written by an older hook version, not a routine step.
+- **Status line** — `tools/statusline/statusline.mjs`, wired via `statusLine` in
+  `.claude/settings.json`. The live counterpart to the ledger: it parses the session and
+  sub-agent transcripts directly, so it counts agents that are still running, and it keeps
+  `new`/`cw`/`cr`/`out` separate instead of summing them into one "tokens" figure. `ctx` is the
+  current window occupancy (last message only), not a running total, measured against
+  `tools/statusline/context-windows.json` — 1M by default, edit that file as models change.
+  `npm run statusline` renders it once for testing.
 - **Scorecard** — `npm run scorecard -- add "<step>" --result "<what came back>" --score "<n/4>"
   --risk "<what could have gone wrong>"` appends one row; `npm run scorecard` prints the table:
-  step, what came back, `correct` (confirmed-and-correct findings out of 4), agents, tokens,
-  est $, wall, and the risk column.
+  step, what came back, `correct` (out of 4: confirmed findings in the key, minus confirmed
+  entries that aren't — a merged decoy costs a point), agents, tokens, est $, wall, and the risk
+  column.
 - **Evals kit** (`evals/`) — grades the `money-movement-checklist` skill headless against five
   labelled diffs: `npm run evals`, `npm run evals:compare`.
 - **flaky-scan** (`.claude/skills/flaky-scan`) — `/flaky-scan <service> [runs]` reruns a
@@ -66,6 +85,8 @@ and `GOAL-FIX.md`'s rubric).
 ## Attendee prerequisites and gotchas
 
 - Claude Code 2.1.251 or newer (`claude update`).
+- Start it with `claude --setting-sources project,local` so user-level plugins, MCP servers and
+  skills stay out of the context window and the token ledger.
 - A plan with workflows enabled — rung 4's dynamic workflow needs it.
 - Node 20+.
 - `gh` authenticated — the routine step opens GitHub issues.

@@ -2,9 +2,9 @@
 
 Grades the `money-movement-checklist` skill against five labelled diffs: does
 it flag the planted finding, and nothing else. The shipped skill is
-intentionally weak on item 3 (PII/card data in logs); the solution skill passes 5/5 only once
-both halves of the fix are applied — the item-3 checklist bullet, and the output contract's
-severity line ("high for 3 and 5"), which is the half that's easy to skip.
+intentionally weak on item 3 (PII/card data in logs): the checklist bullet is worded fully, but
+the output contract's severity line assigns nothing to item 3, so the skill invents a severity or
+drops the finding. The solution skill differs by that one line ("high for 3 and 5") and passes 5/5.
 
 Task-03's miss is the deliberate one. On a live model, any of the other four
 tasks can occasionally miss too — that's ordinary run-to-run model variance,
