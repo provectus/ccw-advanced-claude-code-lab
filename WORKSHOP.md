@@ -3,16 +3,22 @@
 ## What the workshop is
 
 One Friday afternoon, three small money-movement services, and five problems planted on purpose
-— see [CASE.md](CASE.md) for the story. You run one dependency audit five different ways (the
-ladder below), then converge on a real fix with `/goal`, grade a skill against an evals kit,
-schedule a routine, and end with one scorecard that says what every step cost.
+— see [CASE.md](CASE.md) for the story. You resolve the **same three issues five different ways**,
+from one sub-agent to an agent team (ladder B below), then converge on a real fix with `/goal`,
+grade a skill against an evals kit, schedule a routine, and end with one scorecard that says what
+every step cost. The dependency audit (ladder A) ships alongside it, and is the ladder the
+build-it bonus rebuilds.
 
 ## Where the steps and points live
 
 The steps, prompts, and points live in the workshop app, not here. This file maps the repo's
 files and commands to those steps, so you can follow along in a terminal alongside the app.
 
-## The ladder
+## Ladder A — the dependency audit
+
+**The app's steps 4–9 run ladder B, below.** This read-only audit is the ladder the build-it
+bonus (steps 15–16) rebuilds: `/dep-audit` and the verifier agent are its pieces, and they are
+the ones that ship with stubs.
 
 Five ways to run the same dependency audit across `payments/`, `kyc/`, and `ledger/`. The full
 prompts, byte for byte, and the deliverable contract they all share are in
@@ -44,13 +50,14 @@ rungs stop agreeing the moment nothing re-reads the line before it is merged:
 `dependencies`/`devDependencies`; ledger's `debug` decoy is flagged by every finder. Grade the
 confirmed entries against the key, not the `found` count.
 
-## Ladder B — the same five harnesses on a write task
+## Ladder B — the workshop's ladder: the same five harnesses on a write task
 
-Ladder A audits three tiny manifests, and in the measured run four of five rungs scored 4/4 —
-the task is too small for the harness to matter. Ladder B runs the same five harnesses on a task
-that edits code: three issues under `issues/`, one per service, each with numbered acceptance
-criteria. The three defects are already in the shipped source — no planting step. Prompts, byte
-for byte, and the deliverable contract are in [solutions/RUNGS-ISSUES.md](solutions/RUNGS-ISSUES.md);
+**This is what the app's steps 4–9 run.** Ladder A audits three tiny manifests, and in the
+measured run four of five rungs scored 4/4 — the task is too small for the harness to matter.
+Ladder B runs the same five harnesses on a task that edits code: three issues under `issues/`,
+one per service, each with numbered acceptance criteria. The three defects are already in the
+shipped source — no planting step. Prompts, byte for byte, and the deliverable contract are
+in [solutions/RUNGS-ISSUES.md](solutions/RUNGS-ISSUES.md);
 the answer key and the bad fixes that still pass the visible tests are in
 [solutions/ISSUE-FIXES.md](solutions/ISSUE-FIXES.md).
 
@@ -140,9 +147,11 @@ and `GOAL-FIX.md`'s rubric).
 
 ## Cost
 
-The measured core run — rungs 1 through 4, plus evals and the hook/structure check — cost
-**$1.21** on Sonnet. Every fan-out prompt in the workshop carries a cost guard: a turn cap when
-interactive, `--max-budget-usd` when headless (see `CLAUDE.md`'s Cost guards).
+The measured **ladder A** run — rungs 1 through 4, plus evals and the hook/structure check —
+cost **$1.21** on Sonnet. **Ladder B costs more**: each writer runs its service's tests, so budget
+well under **$5** for the whole lab. Both are estimates — read your own `npm run tokens` rather
+than take either on faith. Every fan-out prompt in the workshop carries a cost guard: a turn cap
+when interactive, `--max-budget-usd` when headless (see `CLAUDE.md`'s Cost guards).
 
 ## Step map
 
@@ -152,17 +161,17 @@ files, lines, and expected diffs, if you're stuck or authoring workshop text.
 
 | # | step | repo artifacts |
 |---|---|---|
-| 1 | The case | `CASE.md`, `npm install`, `npm test` |
+| 1 | The case | `CASE.md`, `npm install`, `npm test`, `npm run grade` (the 1/4 floor) |
 | 2 | Size it (skippable) | `/context`, `/usage`, `.claude/hooks/trim-test-output.mjs` |
-| 3 | A skill you never call | `ledger/`, `.claude/skills/money-movement-conventions` |
-| 4 | Rung 1 | one self-verifying sub-agent, `runs/dep-audit.md`, `npm run scorecard` |
+| 3 | A skill you never call | `ledger/`, `.claude/skills/money-movement-conventions`, `npm run issues:reset` |
+| 4 | Rung 1 | one self-verifying sub-agent, `issues/`, `runs/issue-fix.md`, `npm run grade` |
 | 5 | Read the meter | `npm run tokens` |
-| 6 | Rung 2 | three background finders, `runs/dep-audit.md` |
-| 7 | Rung 3 | `/dep-audit`, `.claude/skills/dep-audit` |
-| 8 | Rung 4 | an ultracode workflow, saved as `/dep-audit-workflow` |
+| 6 | Rung 2 | three background writers, one per service, `runs/issue-fix.md`, `npm run grade` |
+| 7 | Rung 3 | `/issue-fix`, `.claude/skills/issue-fix`, `.claude/agents/fix-verifier.md` |
+| 8 | Rung 4 | an ultracode workflow, saved as `/issue-fix-workflow` |
 | 9 | Rung 5 | an agent team, interactive, `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` |
 | 10 | Compare the rungs | `npm run scorecard` |
-| 11 | `/goal` on kyc | `/flaky-scan kyc`, `/goal`, `kyc/`, `solutions/GOAL-FIX.md` |
+| 11 | `/goal` on kyc | `/flaky-scan kyc`, `.claude/edit-scope`, `/goal`, `kyc/`, `solutions/GOAL-FIX.md` |
 | 12 | Grade the checklist skill | `npm run evals`, `.claude/skills/money-movement-checklist` |
 | 13 | Create one routine | `/flaky-scan kyc 3`, a scheduled routine, GitHub issues |
 | 14 | Bring the scorecard | `runs/scorecard.md` |
