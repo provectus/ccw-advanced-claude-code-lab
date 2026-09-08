@@ -12,6 +12,9 @@
     "kyc",
     "ledger"
   ],
+  "overrides": {
+    "debug": "4.4.3"
+  },
   "scripts": {
     "test": "vitest run",
     "test:payments": "vitest run payments/",
@@ -22,6 +25,7 @@
     "dev:kyc": "tsx kyc/src/server.ts",
     "dev:ledger": "tsx ledger/src/server.ts",
     "tokens": "node tools/ledger/report.mjs",
+    "statusline": "node tools/statusline/statusline.mjs",
     "scorecard": "node tools/scorecard/scorecard.mjs",
     "evals": "node evals/run.mjs",
     "evals:compare": "node evals/compare.mjs",

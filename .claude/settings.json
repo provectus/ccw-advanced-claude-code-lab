@@ -1,5 +1,10 @@
 {
   "workflowSizeGuideline": "small",
+  "statusLine": {
+    "type": "command",
+    "command": "node \"$CLAUDE_PROJECT_DIR/tools/statusline/statusline.mjs\"",
+    "padding": 0
+  },
   "permissions": {
     "allow": [
       "Bash(npm test:*)",

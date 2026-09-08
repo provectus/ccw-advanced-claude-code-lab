@@ -1,0 +1,10 @@
+{
+  "note": "Context window sizes in tokens. `by_model_substring` is matched against the lowercased model id, FIRST match wins, so order matters: an explicit [1m] marker is listed before any family rule. Anything unmatched gets `default`. `tiers` is the fallback ladder for when observed context already exceeds the size we guessed (see statusline.mjs). STATUSLINE_CONTEXT_LIMIT overrides all of this.",
+  "default": 1000000,
+  "by_model_substring": {
+    "[1m]": 1000000,
+    "-1m": 1000000,
+    "haiku": 200000
+  },
+  "tiers": [200000, 500000, 1000000, 2000000]
+}

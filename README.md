@@ -34,7 +34,7 @@ npm run check               # repo self-check
 - `payments/`, `kyc/`, `ledger/` — the three services, each with its own `src/`, `tests/`, and dependencies
 - `.claude/` — skills, agents, and hooks Claude Code uses in this repo
 - `evals/` — an eval kit for one of the skills
-- `tools/` — a token-usage ledger, a scorecard, and a repo self-check
+- `tools/` — a token-usage ledger, a status line, a scorecard, and a repo self-check
 - `build-it/`, `solutions/` — a bonus build track and its finished reference
 
 ## This repo doubles as a workshop
