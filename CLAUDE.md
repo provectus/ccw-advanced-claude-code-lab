@@ -78,15 +78,16 @@ A status line is wired alongside them (`tools/statusline/statusline.mjs`), readi
 transcripts rather than the ledger so it also counts sub-agents that are still running:
 
 ```
-Opus 5  ctx 111.4k/1M 11% █░░░░░░░░░
-main   new 156  cw 69.7k  cr 6.74M  out 15.4k  $1.68
-subs 14 verifier x6 Explore x4 general-purpose x4  new 60  cw 185.1k  cr 459.3k  out 2.2k  $0.577  run $2.25
+Opus 5  context 111.4k/1M 11% █░░░░░░░░░
+session  input 156  cache-write 69.7k  cache-read 6.74M  output 15.4k  cost $1.68
+agents 14 (verifier x6 Explore x4 general-purpose x4)  input 60  cache-write 185.1k  cache-read 459.3k  output 2.2k  cost $0.577  total $2.25
 ```
 
-`new`/`cw`/`cr`/`out` are the four billing counters kept separate on purpose — fresh input,
-cache write (1.25x input), cache read (0.1x input), output — and are the same four `npm run
-tokens` prints as `in`/`cache w`/`cache r`/`out`. `ctx` is not one of them and is not a total:
-it's the current window occupancy, taken from the last message alone. Window sizes live in
+`input`/`cache-write`/`cache-read`/`output` are the four billing counters kept separate on
+purpose — fresh input, cache write (1.25x input), cache read (0.1x input), output — and are the
+same four `npm run tokens` prints as `in`/`cache w`/`cache r`/`out`. `context` is not one of
+them and is not a total: it's the current window occupancy, taken from the last message alone.
+`total` is the session's cost plus every sub-agent's. Window sizes live in
 `tools/statusline/context-windows.json` (1M unless a model matches a smaller entry) — edit that
 file as models change, not the script.
 

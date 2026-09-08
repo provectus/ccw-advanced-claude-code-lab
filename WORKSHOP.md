@@ -95,7 +95,7 @@ worktrees: a worktree has no `node_modules`, so `npm test -w <service>` cannot r
 - **Status line** — `tools/statusline/statusline.mjs`, wired via `statusLine` in
   `.claude/settings.json`. The live counterpart to the ledger: it parses the session and
   sub-agent transcripts directly, so it counts agents that are still running, and it keeps
-  `new`/`cw`/`cr`/`out` separate instead of summing them into one "tokens" figure. `ctx` is the
+  `input`/`cache-write`/`cache-read`/`output` separate instead of summing them into one "tokens" figure. `context` is the
   current window occupancy (last message only), not a running total, measured against
   `tools/statusline/context-windows.json` — 1M by default, edit that file as models change.
   `npm run statusline` renders it once for testing.
