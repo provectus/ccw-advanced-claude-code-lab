@@ -13,8 +13,16 @@ Finished copies of every `build-it/` stub, plus a few files with no stub counter
   saved dynamic-workflow script instead of a slash command (named `dep-audit-workflow` since the
   rung-3 skill already owns `/dep-audit` in the same session). No stub — rung 4 has attendees
   author and save their own.
+- `.claude/agents/fix-verifier.md`, `.claude/skills/issue-fix/SKILL.md`,
+  `.claude/workflows/issue-fix-workflow.js` — ladder B's verifier agent, rung-3 skill and
+  rung-4 saved workflow; the agent and skill are byte-identical to the shipped ones under
+  `.claude/`.
 - `GOAL-FIX.md` — the kyc SLA bug, the good fix, two fixes that also go green but shouldn't, and
   the rubric to grade a `/goal` run against.
+- `ISSUE-FIXES.md` — ladder B's answer key: the good fix per issue, the bad fixes that still
+  pass the visible tests, and the rubric behind `npm run grade`.
+- `RUNGS-ISSUES.md` — ladder B's five prompts, byte for byte, plus the deliverable contract
+  (`runs/issue-fix.md` format, the reply line, the per-rung reset/grade loop).
 - `PLANTED-FINDINGS.md` — the answer key. It spoils every step: file, line, and expected result
   for all five planted findings. Read it only if you're stuck or authoring the workshop text.
 - `RUNGS.md` — the five rung prompts, byte for byte, plus the shared deliverable contract

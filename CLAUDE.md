@@ -16,6 +16,8 @@ npm run statusline           # render the status line once, standalone
 npm run scorecard            # append/print the workshop scorecard
 npm run evals                # grade the checklist skill (spends tokens)
 npm run check                # repo self-check, no tokens spent
+npm run grade                # ladder B: hidden tests under grading/ + scope check, prints n/4
+npm run issues:reset         # ladder B: restore payments/, kyc/, ledger/ to the committed state
 ```
 
 ## Services
@@ -29,6 +31,10 @@ npm run check                # repo self-check, no tokens spent
 Each service owns its `src/`, `tests/` (Vitest), and `package.json` dependencies. Nothing is
 shared between services on purpose: one agent can own one service.
 
+`issues/` holds one planted issue per service (ladder B of the workshop); `grading/` holds the
+hidden tests that grade a fix — a separate Vitest config that `npm test` never runs. Neither
+folder is edited by a rung.
+
 ## Coding conventions
 
 - Tests live in `<service>/tests` (Vitest); sources run directly via `tsx`, no build step.
@@ -41,7 +47,9 @@ shared between services on purpose: one agent can own one service.
 
 - Sub-agents return **paths and counts, never transcripts**. State the return shape in every brief (`file:line`, one line each).
 - Name the thing to find, not the topic. "Every call site of `verifyToken`", not "look at auth".
-- One service per worker. Parallel writers use `isolation: worktree`.
+- One service per worker. Parallel writers use `isolation: worktree` — except when a worker
+  must run `npm test -w <service>`: a worktree has no `node_modules` (the workspace install
+  lives at the root), so those writers edit the main tree, one disjoint service folder each.
 - Read-only agents get `Read, Grep, Glob` only.
 - Ask for a diff summary, not a merge. The human is the gate.
 

@@ -33,6 +33,26 @@ TypeScript services, and Claude Code.
    item except 3. Graded against a diff that leaks a card number to
    `console.log`, it misses.
 
+## Three issues, also in the open
+
+Ladder B (see `WORKSHOP.md`) runs the same five harnesses on a task that edits code instead of
+auditing it. Its three issues live under `issues/`, one per service, each with numbered
+acceptance criteria, and the defects are already in the shipped source:
+
+- **A — payments: a retried `POST /payouts` creates a second payout**
+  (`issues/payments-duplicate-payouts.md`). The route accepts no `idempotencyKey` at all.
+  The fix that goes green and is still wrong: match retries by the body instead of the key.
+- **B — kyc: `GET /applicants/:id/status` needs no token**
+  (`issues/kyc-status-leak.md`, `kyc/src/app.ts:28`). Not a money-moving route, so problem 2's
+  claim above still holds, but it reveals a decision to anyone on port 4002. The wrong fix:
+  paste the `kyc:write` scope from the verify route and lock out read-only principals.
+- **C — ledger: a reused `idempotencyKey` with a different body returns the first entry**
+  (`issues/ledger-idempotency-conflict.md`, `ledger/src/ledger.ts:49`). The wrong fix: key the
+  map by `key + amount`, which moves money twice on a mismatched retry.
+
+The grader is `npm run grade`: hidden tests under `grading/` that `npm test` never runs, plus a
+scope check. The answer key and every bad fix are in `solutions/ISSUE-FIXES.md`.
+
 ## The five problems, in plain words
 
 Same five, one paragraph each: what is wrong, why anyone should care, what you can actually
@@ -127,7 +147,7 @@ shipped skill and `solutions/.claude/skills/money-movement-checklist/SKILL.md`.
 | term | meaning here |
 |---|---|
 | minor units | amounts are integers in cents (`amountCents: 2500` = 25.00), never floats — no rounding drift, no `0.1 + 0.2` |
-| idempotency key | a caller-chosen string sent with a transfer or payout; a retry with the same key returns the original entry instead of moving the money twice |
+| idempotency key | a caller-chosen string sent with a transfer; a retry with the same key and the same body returns the original entry instead of moving the money twice, and the same key with a *different* body should be refused. Payouts don't accept one yet — that is issue A |
 | scope | what a token is allowed to do — `ledger:read` can see balances, `ledger:write` can move money; `requireAuth('ledger:write')` checks both the token and the scope |
 | manifest vs lockfile | `package.json` says what you *want* (a range); `package-lock.json` records what you *got* last time. Only the manifest is a promise |
 | exact version vs range | `5.2.1` installs one thing; `*`, `latest`, `>=`, `^`, `~` let the installer choose |
@@ -150,12 +170,24 @@ The scorecard's `correct` column is where you write down, against the same
 four findings every time, which harness actually got it right — and next to
 it, what it cost you to find out.
 
+Then you run the same five harnesses again on ladder B — the three issues
+above, one per service — where the harness has to *edit* code and the grade
+comes from hidden tests, not from a reply line. Every rung replies
+`fixed <n>, holds <n>, fails <n>`; `npm run grade` says what actually holds.
+A writer stops at the first criterion that goes green. A merged set of three
+diffs nobody verified carries whichever one did. A verifier that reads the
+diff and agrees is a rubber stamp; one that derives a check from each
+acceptance criterion and runs it is the only thing that catches the composite
+key, the wrong scope, and the amount-only compare. The gap between the reply
+and the grade is the row's "what could have gone wrong".
+
 ## Four kinds of skill in this repo
 
 | skill | who invokes it | what it bundles | cost when idle | the step that uses it |
 |---|---|---|---|---|
 | `money-movement-checklist` | Claude, on its own, reviewing a diff | a text checklist | its description sits in context; full text loads only when used | Evals |
-| `dep-audit` | you, `/dep-audit` | a 3-step sub-agent orchestration | zero — hidden from context until you type it | Rung 3 |
+| `dep-audit` | you, `/dep-audit` | a 3-step sub-agent orchestration | zero — hidden from context until you type it | Rung 3 (ladder A) |
+| `issue-fix` | you, `/issue-fix` | the same 3-step shape — writers, `fix-verifier` agents, report — on the three issues | zero — hidden from context until you type it | Rung 3 (ladder B) |
 | `flaky-scan` | you, `/flaky-scan <service> [runs]` | a deterministic Node script | zero — hidden from context until you type it | Routine (primes `/goal` too) |
 | `money-movement-conventions` | Claude, on its own, editing `payments/`, `kyc/`, or `ledger/` | six conventions, plain text | its description sits in context; full text loads only when used | A skill you never call |
 
@@ -169,7 +201,7 @@ scorecard` prints the table.
 |---|---|
 | step | the rung or step you just ran |
 | what came back | the artifact or answer, in your words |
-| correct | out of 4: confirmed findings that match the answer key, minus confirmed entries that don't (a decoy, `express`, anything not in the key), floored at 0 — so `found 6, confirmed 6` with the four real ones inside reads `2/4`, not `4/4` |
+| correct | out of 4. Ladder A: confirmed findings that match the answer key, minus confirmed entries that don't (a decoy, `express`, anything not in the key), floored at 0 — so `found 6, confirmed 6` with the four real ones inside reads `2/4`, not `4/4`. Ladder B: what `npm run grade` prints — one point per issue whose hidden tests all pass, one for a clean scope |
 | agents | sub-agents spawned since the last row |
 | tokens | total tokens across those agents and turns |
 | est $ | estimated cost, from `tools/ledger/prices.json` |
