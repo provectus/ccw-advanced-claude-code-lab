@@ -16,6 +16,8 @@ npm run statusline           # render the status line once, standalone
 npm run scorecard            # append/print the workshop scorecard
 npm run evals                # grade the checklist skill (spends tokens)
 npm run check                # repo self-check, no tokens spent
+npm run grade                # ladder B: hidden tests under grading/ + scope check, prints n/4
+npm run issues:reset         # ladder B: restore payments/, kyc/, ledger/ to the committed state
 ```
 
 ## Services
@@ -29,6 +31,10 @@ npm run check                # repo self-check, no tokens spent
 Each service owns its `src/`, `tests/` (Vitest), and `package.json` dependencies. Nothing is
 shared between services on purpose: one agent can own one service.
 
+`issues/` holds one planted issue per service (ladder B of the workshop); `grading/` holds the
+hidden tests that grade a fix — a separate Vitest config that `npm test` never runs. Neither
+folder is edited by a rung.
+
 ## Coding conventions
 
 - Tests live in `<service>/tests` (Vitest); sources run directly via `tsx`, no build step.
@@ -41,7 +47,9 @@ shared between services on purpose: one agent can own one service.
 
 - Sub-agents return **paths and counts, never transcripts**. State the return shape in every brief (`file:line`, one line each).
 - Name the thing to find, not the topic. "Every call site of `verifyToken`", not "look at auth".
-- One service per worker. Parallel writers use `isolation: worktree`.
+- One service per worker. Parallel writers use `isolation: worktree` — except when a worker
+  must run `npm test -w <service>`: a worktree has no `node_modules` (the workspace install
+  lives at the root), so those writers edit the main tree, one disjoint service folder each.
 - Read-only agents get `Read, Grep, Glob` only.
 - Ask for a diff summary, not a merge. The human is the gate.
 
@@ -70,15 +78,16 @@ A status line is wired alongside them (`tools/statusline/statusline.mjs`), readi
 transcripts rather than the ledger so it also counts sub-agents that are still running:
 
 ```
-Opus 5  ctx 111.4k/1M 11% █░░░░░░░░░
-main   new 156  cw 69.7k  cr 6.74M  out 15.4k  $1.68
-subs 14 verifier x6 Explore x4 general-purpose x4  new 60  cw 185.1k  cr 459.3k  out 2.2k  $0.577  run $2.25
+Opus 5  context 111.4k/1M 11% █░░░░░░░░░
+session  input 156  cache-write 69.7k  cache-read 6.74M  output 15.4k  cost $1.68
+agents 14 (verifier x6 Explore x4 general-purpose x4)  input 60  cache-write 185.1k  cache-read 459.3k  output 2.2k  cost $0.577  total $2.25
 ```
 
-`new`/`cw`/`cr`/`out` are the four billing counters kept separate on purpose — fresh input,
-cache write (1.25x input), cache read (0.1x input), output — and are the same four `npm run
-tokens` prints as `in`/`cache w`/`cache r`/`out`. `ctx` is not one of them and is not a total:
-it's the current window occupancy, taken from the last message alone. Window sizes live in
+`input`/`cache-write`/`cache-read`/`output` are the four billing counters kept separate on
+purpose — fresh input, cache write (1.25x input), cache read (0.1x input), output — and are the
+same four `npm run tokens` prints as `in`/`cache w`/`cache r`/`out`. `context` is not one of
+them and is not a total: it's the current window occupancy, taken from the last message alone.
+`total` is the session's cost plus every sub-agent's. Window sizes live in
 `tools/statusline/context-windows.json` (1M unless a model matches a smaller entry) — edit that
 file as models change, not the script.
 

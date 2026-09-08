@@ -29,6 +29,8 @@
     "scorecard": "node tools/scorecard/scorecard.mjs",
     "evals": "node evals/run.mjs",
     "evals:compare": "node evals/compare.mjs",
+    "grade": "node tools/grade/grade.mjs",
+    "issues:reset": "git checkout -- payments kyc ledger && git clean -fd payments kyc ledger",
     "check:structure": "node tools/check/structure.mjs",
     "check": "node --test \"tests/*.test.mjs\" && node tools/check/structure.mjs && vitest run --exclude \"**/sla.test.ts\""
   },

@@ -23,9 +23,9 @@ function run(runsDir, payload) {
   })
 }
 
-/** Pulls `new`/`cw`/`cr`/`out` off one rendered line, as raw strings. */
+/** Pulls `input`/`cache-write`/`cache-read`/`output` off one rendered line, as raw strings. */
 function counters(line) {
-  const m = /new (\S+)\s+cw (\S+)\s+cr (\S+)\s+out (\S+)/.exec(line)
+  const m = /input (\S+)\s+cache-write (\S+)\s+cache-read (\S+)\s+output (\S+)/.exec(line)
   assert.ok(m, `no counter split in: ${line}`)
   return { new: m[1], cw: m[2], cr: m[3], out: m[4] }
 }
@@ -51,7 +51,7 @@ describe('status line', () => {
     assert.match(head, /^Sonnet 5\b/)
     // Cumulative across both messages: 20+8, 5000+200, 40000+45000, 60+140.
     assert.deepEqual(counters(main), { new: '28', cw: '5.2k', cr: '85k', out: '200' })
-    assert.match(subs, /subs none yet/)
+    assert.match(subs, /agents none yet/)
   })
 
   it('shows context as the last message alone, not the sum of every turn', () => {
@@ -61,14 +61,14 @@ describe('status line', () => {
       model: { id: 'claude-sonnet-5', display_name: 'Sonnet 5' },
     })
     // Last message only: 8 + 200 + 45000 = 45208. Summing both turns would give 90.2k.
-    assert.match(out, /ctx 45\.2k\/1M 5%/)
+    assert.match(out, /context 45\.2k\/1M 5%/)
   })
 
   it('defaults to a 1M window and takes a smaller one only from context-windows.json', () => {
     const payload = { session_id: 's', transcript_path: path.join(fixtures, 'session-sonnet.jsonl') }
-    assert.match(run(freshDir(), { ...payload, model: { id: 'claude-opus-5[1m]' } }), /ctx 45\.2k\/1M /)
-    assert.match(run(freshDir(), { ...payload, model: { id: 'claude-sonnet-5' } }), /ctx 45\.2k\/1M /)
-    assert.match(run(freshDir(), { ...payload, model: { id: 'claude-haiku-4-5-20251001' } }), /ctx 45\.2k\/200k /)
+    assert.match(run(freshDir(), { ...payload, model: { id: 'claude-opus-5[1m]' } }), /context 45\.2k\/1M /)
+    assert.match(run(freshDir(), { ...payload, model: { id: 'claude-sonnet-5' } }), /context 45\.2k\/1M /)
+    assert.match(run(freshDir(), { ...payload, model: { id: 'claude-haiku-4-5-20251001' } }), /context 45\.2k\/200k /)
   })
 
   it('promotes a window size that the observed context has already disproved', () => {
@@ -77,7 +77,7 @@ describe('status line', () => {
     // 300k of context on a model configured as 200k: the configured size is provably wrong.
     fs.writeFileSync(transcript, assistantLine('msg_1', { input_tokens: 0, cache_creation_input_tokens: 0, cache_read_input_tokens: 300_000, output_tokens: 1 }) + '\n')
     const out = run(dir, { session_id: 's', transcript_path: transcript, model: { id: 'claude-haiku-4-5-20251001' } })
-    assert.match(out, /ctx 300k\/500k 60%/)
+    assert.match(out, /context 300k\/500k 60%/)
   })
 
   it('totals sub-agents from their own transcripts, including a nested workflow spawn', () => {
@@ -94,7 +94,7 @@ describe('status line', () => {
     fs.writeFileSync(path.join(nested, 'agent-a2.meta.json'), JSON.stringify({ agentType: 'verifier' }))
 
     const subs = run(dir, { session_id: 's-x', transcript_path: transcript, model: { id: 'claude-sonnet-5' } }).trim().split('\n')[2]
-    assert.match(subs, /^subs 2 verifier x2/)
+    assert.match(subs, /^agents 2 \(verifier x2\)/)
     assert.deepEqual(counters(subs), { new: '30', cw: '300', cr: '3k', out: '20' })
   })
 
@@ -143,6 +143,6 @@ describe('status line', () => {
   it('renders without a transcript instead of crashing', () => {
     const out = run(freshDir(), { session_id: 's', transcript_path: path.join(freshDir(), 'missing.jsonl'), model: { id: 'claude-sonnet-5', display_name: 'Sonnet 5' } })
     assert.match(out, /no usage yet/)
-    assert.match(out, /ctx 0\/1M 0%/)
+    assert.match(out, /context 0\/1M 0%/)
   })
 })

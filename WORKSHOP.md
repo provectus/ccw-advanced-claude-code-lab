@@ -44,6 +44,47 @@ rungs stop agreeing the moment nothing re-reads the line before it is merged:
 `dependencies`/`devDependencies`; ledger's `debug` decoy is flagged by every finder. Grade the
 confirmed entries against the key, not the `found` count.
 
+## Ladder B — the same five harnesses on a write task
+
+Ladder A audits three tiny manifests, and in the measured run four of five rungs scored 4/4 —
+the task is too small for the harness to matter. Ladder B runs the same five harnesses on a task
+that edits code: three issues under `issues/`, one per service, each with numbered acceptance
+criteria. The three defects are already in the shipped source — no planting step. Prompts, byte
+for byte, and the deliverable contract are in [solutions/RUNGS-ISSUES.md](solutions/RUNGS-ISSUES.md);
+the answer key and the bad fixes that still pass the visible tests are in
+[solutions/ISSUE-FIXES.md](solutions/ISSUE-FIXES.md).
+
+| issue | service | what is wrong | the fix that goes green and is still wrong |
+|---|---|---|---|
+| A | `payments/` | a retried `POST /payouts` creates a second payout | dedupe by body instead of by key |
+| B | `kyc/` | `GET /applicants/:id/status` needs no token | copy the `kyc:write` scope from the verify route |
+| C | `ledger/` | a reused `idempotencyKey` with a different body returns the first entry | key the map by `key + amount` — money moves twice |
+
+The grader is `npm run grade`: it runs the hidden tests under `grading/` (a separate Vitest
+config, never part of `npm test`), checks that nothing outside the three services changed and no
+test was deleted or skipped, prints one line per issue with the missed criteria by name, and
+prints the scorecard command to paste. Score is `<n>/4`: one point per issue, one for scope.
+
+Per rung: `/clear` → `npm run issues:reset` (restores `payments/`, `kyc/`, `ledger/` to the
+committed state; nothing else is touched) → the prompt → `npm run grade` → the scorecard row.
+Every rung replies `fixed <n>, holds <n>, fails <n>` — its own claim — and the grade is the
+truth; the gap between the two is the "what could have gone wrong" column.
+
+| rung | harness | prompt | expected reply | expected grade | what it teaches |
+|---|---|---|---|---|---|
+| 1 | one sub-agent, self-verifying | RUNGS-ISSUES.md § Rung 1 | `fixed 3, holds 3, fails 0` | 3/4–4/4 | one careful agent gets most of it; its own check tends to re-run the tests it just wrote |
+| 2 | three background writers, no verifier | RUNGS-ISSUES.md § Rung 2 | `fixed 3, holds 3, fails 0` (by construction) | 2/4–3/4 | the claim is always 3/3; the grade shows which writer stopped at the first criterion that went green |
+| 3 | `/issue-fix` skill | RUNGS-ISSUES.md § Rung 3 | `fixed 3, holds <n>, fails <n>` | 4/4 | a verifier that derives checks from the issue text, not the diff, catches the composite key, the write scope, the amount-only compare |
+| 4 | dynamic workflow, saved as `/issue-fix-workflow` | RUNGS-ISSUES.md § Rung 4 | same as 3 | 4/4 | the same plan as a script: phases, schemas, per-agent cost, rerunnable with args |
+| 5 | agent team (interactive) | RUNGS-ISSUES.md § Rung 5 | same as 3, or `not run` | 4/4 if the verifier holds | a consensus is only as good as its verifier teammate |
+
+New pieces for this ladder: `.claude/agents/fix-verifier.md` (one per issue; writes a throwaway
+check script under `runs/verify/` from the acceptance criteria and runs it — do not create
+`.claude/edit-scope` during this ladder or it will block those writes), `.claude/skills/issue-fix`
+(rung 3), `solutions/.claude/workflows/issue-fix-workflow.js` (rung 4's saved script), and
+`tools/grade/grade.mjs`. Parallel writers edit the main tree, one service each, rather than
+worktrees: a worktree has no `node_modules`, so `npm test -w <service>` cannot run there.
+
 ## The instruments
 
 - **Token ledger** — `SubagentStop`/`Stop` hooks append one line per finished sub-agent or turn
@@ -54,7 +95,7 @@ confirmed entries against the key, not the `found` count.
 - **Status line** — `tools/statusline/statusline.mjs`, wired via `statusLine` in
   `.claude/settings.json`. The live counterpart to the ledger: it parses the session and
   sub-agent transcripts directly, so it counts agents that are still running, and it keeps
-  `new`/`cw`/`cr`/`out` separate instead of summing them into one "tokens" figure. `ctx` is the
+  `input`/`cache-write`/`cache-read`/`output` separate instead of summing them into one "tokens" figure. `context` is the
   current window occupancy (last message only), not a running total, measured against
   `tools/statusline/context-windows.json` — 1M by default, edit that file as models change.
   `npm run statusline` renders it once for testing.

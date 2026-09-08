@@ -7,18 +7,19 @@
 // Four different counters get summed into one "tokens" figure by most tools. They cost
 // different amounts and mean different things:
 //
-//   new  input_tokens                  — uncached prompt bytes. Full input price.
-//   cw   cache_creation_input_tokens   — written into the prompt cache. 1.25x input price.
-//   cr   cache_read_input_tokens       — served from the cache. 0.1x input price.
-//   out  output_tokens                 — generated. Output price (5x input, per prices.json).
+//   input        input_tokens                  — uncached prompt bytes. Full input price.
+//   cache-write  cache_creation_input_tokens   — written into the prompt cache. 1.25x input price.
+//   cache-read   cache_read_input_tokens       — served from the cache. 0.1x input price.
+//   output       output_tokens                 — generated. Output price (5x input, per prices.json).
 //
-// A long session is mostly `cr`, which is why a 200k-token turn can cost cents: re-reading
+// A long session is mostly cache-read, which is why a 200k-token turn can cost cents: re-reading
 // cached context is a tenth of the price of sending it fresh. Collapsing the four into one
 // number hides the only lever you have, so this status line never sums them.
 //
 // Separately, and NOT additive with any of the above:
 //
-//   ctx  the CURRENT context window occupancy — input + cw + cr of the LAST assistant message.
+//   context  the CURRENT window occupancy — input + cache-write + cache-read of the LAST
+//        assistant message.
 //        A level, not a total. Summing per-turn numbers to get it is the most common mistake:
 //        a 10-turn session can bill 2M tokens while never exceeding a 120k window, because the
 //        same cached context is re-read every turn. The window SIZE it's measured against comes
@@ -100,28 +101,30 @@ const runUsd = (session?.est_usd ?? 0) + (agents?.est_usd ?? 0)
 const pct = ctxLimit ? ctxUsed / ctxLimit : 0
 const paint = ctxColor(pct)
 
+// Labels are full words on purpose: the line is read by workshop attendees who have not seen
+// the four counters before. `context` is a level, everything else on lines 2–3 is a total.
 const lines = [
-  `${c(modelName, '1;36')}  ${c('ctx', '2')} ${compact(ctxUsed)}/${compact(ctxLimit)} ${paint(pctStr(pct))} ${paint(bar(pct))}`,
-  `${c('main', '2')}   ${split(session)}  ${c(usd(session?.est_usd ?? 0), '33')}`,
+  `${c(modelName, '1;36')}  ${c('context', '2')} ${compact(ctxUsed)}/${compact(ctxLimit)} ${paint(pctStr(pct))} ${paint(bar(pct))}`,
+  `${c('session', '2')}  ${split(session)}  ${c('cost', '2')} ${c(usd(session?.est_usd ?? 0), '33')}`,
 ]
 if (agentFiles.length) {
-  const label = `${c('subs', '2')} ${agentFiles.length}${agentTypes ? c(` ${agentTypes}`, '2') : ''}`
-  lines.push(`${label}  ${split(agents)}  ${c(usd(agents?.est_usd ?? 0), '33')}  ${c('run', '2')} ${c(usd(runUsd), '1;33')}`)
+  const label = `${c('agents', '2')} ${agentFiles.length}${agentTypes ? c(` (${agentTypes})`, '2') : ''}`
+  lines.push(`${label}  ${split(agents)}  ${c('cost', '2')} ${c(usd(agents?.est_usd ?? 0), '33')}  ${c('total', '2')} ${c(usd(runUsd), '1;33')}`)
 } else {
-  lines.push(`${c('subs', '2')} ${c('none yet', '2')}`)
+  lines.push(`${c('agents', '2')} ${c('none yet', '2')}`)
 }
 console.log(lines.join('\n'))
 
 // --- helpers --------------------------------------------------------------------------------
 
-/** `new / cw / cr / out` for one summary, never summed into a single figure. */
+/** `input / cache-write / cache-read / output` for one summary, never summed into one figure. */
 function split(s) {
   if (!s) return c('no usage yet', '2')
   return [
-    `${c('new', '2')} ${compact(s.input_tokens)}`,
-    `${c('cw', '2')} ${compact(s.cache_creation_input_tokens)}`,
-    `${c('cr', '2')} ${compact(s.cache_read_input_tokens)}`,
-    `${c('out', '2')} ${compact(s.output_tokens)}`,
+    `${c('input', '2')} ${compact(s.input_tokens)}`,
+    `${c('cache-write', '2')} ${compact(s.cache_creation_input_tokens)}`,
+    `${c('cache-read', '2')} ${compact(s.cache_read_input_tokens)}`,
+    `${c('output', '2')} ${compact(s.output_tokens)}`,
   ].join('  ')
 }
 
